@@ -11,8 +11,7 @@ curl http://localhost:12000/wallets \
     --include \
     --header "Content-Type: application/json" \
     --request "POST" \
-    --data '{"id": "new_wallet",
-             "balance": 50.0}'
+    --data '{"wallet_id": "new_wallet"}'
 ```
 
 ## Create a transaction

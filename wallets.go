@@ -13,7 +13,7 @@ import (
 	"time"
 )
 
-var errVaultAccountExist error = errors.New("vault account exists")
+var errWalletExists = errors.New("account exists")
 
 type wallet struct {
 	ID           string         `json:"wallet_id"`
@@ -71,46 +71,69 @@ func Genesis(rdb *redis.Client, vaultWalletId string, startingBalance float32) e
 	}
 
 	// Test if vault account exists, exit
-	searchVaultCmd := rdb.Do(ctx, "FT.SEARCH",
-		"idx:wallet:id",
-		fmt.Sprintf(`'@wallet_id:(%s)'`, vaultWalletId),
-	)
-
-	output, errGetVaultWallet := searchVaultCmd.Slice()
-
-	if errGetVaultWallet != nil {
-		log.Printf("error in command: %e for command : %v", errGetVaultWallet, searchVaultCmd.String())
-		return errGetVaultWallet
-	}
-
-	if output[0] != 0 {
-		log.Printf("vault account already exists, aborting")
-		return errVaultAccountExist
+	errCheckWalletExists := checkWalletExists(ctx, rdb, vaultWalletId)
+	if errCheckWalletExists != nil {
+		if errCheckWalletExists == errWalletExists {
+			return nil
+		}
+		return errCheckWalletExists
 	}
 
 	newWallet := wallet{
 		ID:      vaultWalletId,
 		Balance: startingBalance,
 	}
+	return createWallet(ctx, rdb, vaultWalletId, startingBalance, newWallet)
+}
+
+func createWallet(ctx context.Context, rdb *redis.Client, walletId string, startingBalance float32, newWallet wallet) error {
+	if walletId == "" {
+		return errors.New("could not create wallet with empty wallet Id")
+	}
 	strNewWallet, errStrNewWallet := json.Marshal(newWallet)
 	if errStrNewWallet != nil {
-		log.Printf("could not marshal vault wallet into json")
+		log.Printf("could not marshal wallet into json")
 		return errStrNewWallet
 	}
 	errCreateVaultWallet := rdb.Do(ctx, "JSON.SET",
-		fmt.Sprintf("wallet:%s", vaultWalletId),
+		fmt.Sprintf("wallet:%s", walletId),
 		"$",
 		strNewWallet,
 	).Err()
 
 	if errCreateVaultWallet != nil {
-		log.Printf("could not create vault wallet %s with command", errCreateVaultWallet)
+		log.Printf("could not create wallet %s with command", errCreateVaultWallet)
 		return errCreateVaultWallet
 	}
 
-	log.Printf("successfully created vault wallet %s with starting balance %f",
-		vaultWalletId,
+	log.Printf("successfully created wallet %s with starting balance %f",
+		walletId,
 		startingBalance)
+	return nil
+}
+
+func checkWalletExists(ctx context.Context, rdb *redis.Client, walletId string) error {
+	if walletId == "" {
+		return errors.New("could not check wallet with empty wallet Id")
+	}
+
+	searchWalletCmd := rdb.Do(ctx, "FT.SEARCH",
+		"idx:wallet:id",
+		fmt.Sprintf(`'@wallet_id:(%s)'`, walletId),
+	)
+
+	output, errGetWallet := searchWalletCmd.Slice()
+
+	if errGetWallet != nil {
+		log.Printf("error in command: %e for command : %v", errGetWallet, searchWalletCmd.String())
+		return errGetWallet
+	}
+
+	if output[0].(int64) != 0 {
+		log.Printf("Wallet already exists, aborting")
+		return errWalletExists
+	}
+
 	return nil
 }
 
@@ -121,9 +144,26 @@ func postWallet(rdb *redis.Client) func(*gin.Context) {
 			log.Printf("could not process received wallet, %s", errBind)
 			return
 		}
-		log.Printf("received wallet:%+v", receivedWallet)
+		ctx := context.Background()
+		walletId := receivedWallet.ID
+		errCheckWalletExists := checkWalletExists(ctx, rdb, walletId)
+		if errCheckWalletExists != nil {
+			if errCheckWalletExists == errWalletExists {
+				c.IndentedJSON(http.StatusConflict, receivedWallet)
+				return
+			}
+			c.IndentedJSON(http.StatusInternalServerError, receivedWallet)
+			return
+		}
+
+		errCreateWallet := createWallet(ctx, rdb, walletId, 0, receivedWallet)
+		if errCreateWallet != nil {
+			c.IndentedJSON(http.StatusInternalServerError, receivedWallet)
+			return
+		}
 
 		c.IndentedJSON(http.StatusCreated, receivedWallet)
+		return
 	}
 }
 

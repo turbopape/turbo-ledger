@@ -73,9 +73,7 @@ func main() {
 			// Running the Genesis process, the vault account
 			errGenesis := Genesis(rdb, "vault", 500)
 			if errGenesis != nil {
-				if errGenesis != errVaultAccountExist {
-					return errGenesis
-				}
+				return errGenesis
 			}
 
 			// Running the API

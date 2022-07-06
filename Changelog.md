@@ -12,3 +12,4 @@
 - gin router + empty first function
 - skeletons postwallet and posttransaction as closure over rdb
 - Implemented genesis function
+- Implemented create wallet if not exists
