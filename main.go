@@ -64,22 +64,21 @@ func main() {
 			redisPassword := c.String("redisPassword")
 			listenAddress := c.String("listenAddress")
 
-			ctx := context.Background()
-			log.Printf("Connecting to Redis on Host %s with User %s ... ", redisHost, redisUser)
-			rdb := redis.NewClient(&redis.Options{
-				Addr:     redisHost,
-				Username: redisUser,
-				Password: redisPassword, // no password set
-				DB:       0,             // use default DB
-			})
-			pong, errRedis := rdb.Ping(ctx).Result()
-			if errRedis != nil {
-				return errRedis
+			rdb, pong, err := connectToRedis(redisHost, redisUser, redisPassword)
+			if err != nil {
+				return err
 			}
 			log.Printf("Successfully connected to Redis %s", pong)
 
-			// Running the API
+			// Running the Genesis process, the vault account
+			errGenesis := Genesis(rdb, "vault", 500)
+			if errGenesis != nil {
+				if errGenesis != errVaultAccountExist {
+					return errGenesis
+				}
+			}
 
+			// Running the API
 			router := gin.Default()
 			router.POST("wallets", postWallet(rdb))
 			router.POST("transactions", postTransaction(rdb))
@@ -93,4 +92,20 @@ func main() {
 		log.Panic(err)
 	}
 
+}
+
+func connectToRedis(redisHost string, redisUser string, redisPassword string) (*redis.Client, string, error) {
+	ctx := context.Background()
+	log.Printf("Connecting to Redis on Host %s with User %s ... ", redisHost, redisUser)
+	rdb := redis.NewClient(&redis.Options{
+		Addr:     redisHost,
+		Username: redisUser,
+		Password: redisPassword, // no password set
+		DB:       0,             // use default DB
+	})
+	pong, errRedis := rdb.Ping(ctx).Result()
+	if errRedis != nil {
+		return nil, "", errRedis
+	}
+	return rdb, pong, nil
 }
