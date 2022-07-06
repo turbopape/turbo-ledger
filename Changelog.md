@@ -10,3 +10,4 @@
 - cli env vars + dot env
 - redis connection
 - gin router + empty first function
+- skeletons postwallet and posttransaction as closure over rdb

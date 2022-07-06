@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
@@ -51,7 +52,7 @@ func main() {
 			&cli.StringFlag{
 				Name:    "listenAddress",
 				Aliases: []string{"la"},
-				Usage:   "Listen ddress",
+				Usage:   "Listen address",
 				Value:   ":12000",
 				EnvVars: []string{"TURBO_LEDGER_LISTEN_ADDRESS"},
 			},
@@ -63,6 +64,7 @@ func main() {
 			redisPassword := c.String("redisPassword")
 			listenAddress := c.String("listenAddress")
 
+			ctx := context.Background()
 			log.Printf("Connecting to Redis on Host %s with User %s ... ", redisHost, redisUser)
 			rdb := redis.NewClient(&redis.Options{
 				Addr:     redisHost,
@@ -70,14 +72,16 @@ func main() {
 				Password: redisPassword, // no password set
 				DB:       0,             // use default DB
 			})
-			if errRedis := rdb.Context().Err(); errRedis != nil {
+			pong, errRedis := rdb.Ping(ctx).Result()
+			if errRedis != nil {
 				return errRedis
 			}
-			log.Printf("Successfully connected to Redis...")
+			log.Printf("Successfully connected to Redis %s", pong)
 
 			// Running the API
 
 			router := gin.Default()
+			router.POST("wallets", postWallet(rdb))
 			router.POST("transactions", postTransaction(rdb))
 			router.Run(listenAddress)
 			return nil
