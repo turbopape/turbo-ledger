@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"github.com/gin-gonic/gin"
+	"github.com/go-redsync/redsync/v4"
+	"github.com/go-redsync/redsync/v4/redis/goredis/v8"
 	"github.com/joho/godotenv"
 	"github.com/urfave/cli/v2"
 
@@ -70,6 +72,12 @@ func main() {
 			}
 			log.Printf("Successfully connected to Redis %s", pong)
 
+			// Preparing redsync instance
+			pool := goredis.NewPool(rdb)
+			rs := redsync.New(pool)
+			mutexname := "global-wallets-mutex"
+			mutex := rs.NewMutex(mutexname)
+
 			// Running the Genesis process, the vault account
 			errGenesis := Genesis(rdb, "vault", 500)
 			if errGenesis != nil {
@@ -78,8 +86,9 @@ func main() {
 
 			// Running the API
 			router := gin.Default()
+
 			router.POST("wallets", postWallet(rdb))
-			router.POST("transactions", postTransaction(rdb))
+			router.POST("transactions", postTransaction(rdb, mutex))
 			router.GET("wallets", searchWalletsByTags(rdb))
 			router.Run(listenAddress)
 			return nil

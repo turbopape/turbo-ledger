@@ -7,15 +7,13 @@ import (
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/go-redis/redis/v8"
+	"github.com/go-redsync/redsync/v4"
 	"log"
 	"net/http"
 	"strings"
 	"time"
-
-	"sync"
 )
 
-var m sync.Mutex
 var errWalletExists = errors.New("wallet already exists")
 var errWalletNotFound = errors.New("wallet not found")
 var errTransactionWrongAmount = errors.New("wrong transaction amount")
@@ -200,16 +198,23 @@ func getWalletBalance(ctx context.Context, rdb *redis.Client, walletID string) (
 }
 
 // Transactions
-func ProcessTransaction(ctx context.Context, rdb *redis.Client, transaction Transaction, maxAttempts int) error {
+func ProcessTransaction(ctx context.Context, rdb *redis.Client, transaction Transaction, maxAttempts int, mutex *redsync.Mutex) error {
 	if transaction.Amount <= 0 {
 		return errTransactionWrongAmount
 	}
 
-	//Acquire single thread lock
-	m.Lock()
+	log.Printf("acquiring global lock...")
+	if err := mutex.Lock(); err != nil {
+		log.Printf("could not acquire global mutex, aborting")
+		return err
+	}
 
-	//Make sure to unlock on exiting transaction
-	defer m.Unlock()
+	defer func() {
+		log.Printf("releasing global lock...")
+		if ok, err := mutex.Unlock(); !ok || err != nil {
+			log.Printf("could not release global mutex, aborting")
+		}
+	}()
 
 	//Getting source balance, discarding if wallet not found or if not enough balance
 	srcBalance, errGetSrcBalacnce := getWalletBalance(ctx, rdb, transaction.SourceWallet)
@@ -313,8 +318,9 @@ func attemptTransaction(rdb *redis.Client, transaction Transaction) error {
 
 }
 
-func postTransaction(rdb *redis.Client) func(*gin.Context) {
+func postTransaction(rdb *redis.Client, mutex *redsync.Mutex) func(*gin.Context) {
 	return func(c *gin.Context) {
+
 		ctx := context.Background()
 		var receivedTransaction Transaction
 		if errBind := c.BindJSON(&receivedTransaction); errBind != nil {
@@ -323,7 +329,7 @@ func postTransaction(rdb *redis.Client) func(*gin.Context) {
 		}
 		log.Printf("received Transaction:%+v", receivedTransaction)
 
-		if errProcessTransaction := ProcessTransaction(ctx, rdb, receivedTransaction, 3); errProcessTransaction != nil {
+		if errProcessTransaction := ProcessTransaction(ctx, rdb, receivedTransaction, 3, mutex); errProcessTransaction != nil {
 			c.IndentedJSON(http.StatusInternalServerError, receivedTransaction)
 			return
 		}
