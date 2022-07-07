@@ -80,6 +80,7 @@ func main() {
 			router := gin.Default()
 			router.POST("wallets", postWallet(rdb))
 			router.POST("transactions", postTransaction(rdb))
+			router.GET("wallets", searchWalletsByTags(rdb))
 			router.Run(listenAddress)
 			return nil
 		},
