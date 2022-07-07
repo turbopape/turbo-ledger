@@ -11,8 +11,11 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"sync"
 )
 
+var m sync.Mutex
 var errWalletExists = errors.New("wallet already exists")
 var errWalletNotFound = errors.New("wallet not found")
 var errTransactionWrongAmount = errors.New("wrong transaction amount")
@@ -201,6 +204,12 @@ func ProcessTransaction(ctx context.Context, rdb *redis.Client, transaction Tran
 	if transaction.Amount <= 0 {
 		return errTransactionWrongAmount
 	}
+
+	//Acquire single thread lock
+	m.Lock()
+
+	//Make sure to unlock on exiting transaction
+	defer m.Unlock()
 
 	//Getting source balance, discarding if wallet not found or if not enough balance
 	srcBalance, errGetSrcBalacnce := getWalletBalance(ctx, rdb, transaction.SourceWallet)

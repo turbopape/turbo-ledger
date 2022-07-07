@@ -1,4 +1,8 @@
 # Change Log
+## [single-instance-thread-safe-version] - 2022-07-08
+## Added
+- Use single thread locking / unlocking to prevent race conditions on balance
+- 
 ## [naive-version] - 2022-07-08
 ## Added
 - initial structure
