@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/go-redis/redis/v8"
 	"github.com/go-redsync/redsync/v4"
+	"github.com/google/uuid"
 	"log"
 	"net/http"
 	"strings"
@@ -148,7 +149,7 @@ func checkWalletExists(ctx context.Context, rdb *redis.Client, walletId string) 
 	return nil
 }
 
-func postWallet(rdb *redis.Client) func(*gin.Context) {
+func PostWallet(rdb *redis.Client) func(*gin.Context) {
 	return func(c *gin.Context) {
 		var receivedWallet Wallet
 		if errBind := c.BindJSON(&receivedWallet); errBind != nil {
@@ -198,7 +199,7 @@ func getWalletBalance(ctx context.Context, rdb *redis.Client, walletID string) (
 }
 
 // Transactions
-func ProcessTransaction(ctx context.Context, rdb *redis.Client, transaction Transaction, maxAttempts int, mutex *redsync.Mutex) error {
+func processTransaction(ctx context.Context, rdb *redis.Client, transaction Transaction, maxAttempts int, mutex *redsync.Mutex) error {
 	if transaction.Amount <= 0 {
 		return errTransactionWrongAmount
 	}
@@ -215,6 +216,9 @@ func ProcessTransaction(ctx context.Context, rdb *redis.Client, transaction Tran
 			log.Printf("could not release global mutex, aborting")
 		}
 	}()
+
+	// Setting transaction ID with uuid
+	transaction.ID = uuid.New().String()
 
 	//Getting source balance, discarding if wallet not found or if not enough balance
 	srcBalance, errGetSrcBalacnce := getWalletBalance(ctx, rdb, transaction.SourceWallet)
@@ -318,7 +322,7 @@ func attemptTransaction(rdb *redis.Client, transaction Transaction) error {
 
 }
 
-func postTransaction(rdb *redis.Client, mutex *redsync.Mutex) func(*gin.Context) {
+func PostTransaction(rdb *redis.Client, mutex *redsync.Mutex) func(*gin.Context) {
 	return func(c *gin.Context) {
 
 		ctx := context.Background()
@@ -329,7 +333,7 @@ func postTransaction(rdb *redis.Client, mutex *redsync.Mutex) func(*gin.Context)
 		}
 		log.Printf("received Transaction:%+v", receivedTransaction)
 
-		if errProcessTransaction := ProcessTransaction(ctx, rdb, receivedTransaction, 3, mutex); errProcessTransaction != nil {
+		if errProcessTransaction := processTransaction(ctx, rdb, receivedTransaction, 3, mutex); errProcessTransaction != nil {
 			c.IndentedJSON(http.StatusInternalServerError, receivedTransaction)
 			return
 		}
@@ -338,7 +342,7 @@ func postTransaction(rdb *redis.Client, mutex *redsync.Mutex) func(*gin.Context)
 	}
 }
 
-func searchWalletsByTags(rdb *redis.Client) func(*gin.Context) {
+func SearchWalletsByTags(rdb *redis.Client) func(*gin.Context) {
 	return func(c *gin.Context) {
 		ctx := context.Background()
 		if query, ok := c.GetQuery("query"); ok {

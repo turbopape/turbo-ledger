@@ -23,7 +23,7 @@ curl http://localhost:12000/transactions \
     --data '{"source_wallet": "src_wallet",
              "destination_wallet": "dst_wallet",
              "amount": 5,
-             "transaction_description":"description 1",
+             "transaction_description":"my cool transaction",
              "date":"2022-06-07T19:02:01.0Z"}'
 ```
 

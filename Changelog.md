@@ -1,4 +1,7 @@
 # Change Log
+## [minor-additions] - 2022-07-09
+## Added
+- uuid to generate transaction Id
 ## [distributed-redlock-scalable-version] - 2022-07-08
 ## Removed
 - Single thread locking / unlocking

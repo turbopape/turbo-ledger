@@ -87,9 +87,9 @@ func main() {
 			// Running the API
 			router := gin.Default()
 
-			router.POST("wallets", postWallet(rdb))
-			router.POST("transactions", postTransaction(rdb, mutex))
-			router.GET("wallets", searchWalletsByTags(rdb))
+			router.POST("wallets", PostWallet(rdb))
+			router.POST("transactions", PostTransaction(rdb, mutex))
+			router.GET("wallets", SearchWalletsByTags(rdb))
 			router.Run(listenAddress)
 			return nil
 		},
