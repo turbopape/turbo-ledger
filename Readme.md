@@ -27,6 +27,14 @@ curl http://localhost:12000/transactions \
              "date":"2022-06-07T19:02:01.0Z"}'
 ```
 
+## Search wallets by owners
+```shell
+curl http://localhost:12000/wallets/owner?query\=bob\
+    --include \
+    --header "Content-Type: application/json" \
+    --request "GET" 
+```
+
 ## Search wallets by tags
 ```shell
 curl http://localhost:12000/wallets/tags\?query\=rich\

@@ -8,7 +8,7 @@
 - search has paths in api /wallet/tags, /wallet/owner
 ### Added
 - wallet owner, idx:wallet:owner index
-- serach on wallet owner
+- serach on wallet owner, add sample in Readme
 ### Fixed
 - in api when query is bad, return 400 malformed query
 - titles formatting in Changelog
