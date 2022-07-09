@@ -86,6 +86,7 @@ func main() {
 
 			// Running the API
 			router := gin.Default()
+			checkWalletExists(context.Background(), rdb, "src_wallet")
 
 			router.POST("wallets", PostWallet(rdb))
 			router.POST("transactions", PostTransaction(rdb, mutex))

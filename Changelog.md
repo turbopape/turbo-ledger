@@ -1,19 +1,25 @@
 # Change Log
+## re[0.1.0] - 2022-07-09
+### Changed
+- don't use FT.SEARCH to check for wallet's existence
+### Added
+- wallet owner, idx:wallet:owner index
+
 ## [minor-additions] - 2022-07-09
-## Added
+### Added
 - uuid to generate transaction Id
 ## [distributed-redlock-scalable-version] - 2022-07-08
-## Removed
+### Removed
 - Single thread locking / unlocking
-## Added
+### Added
 - Distributed locking using redis - redlock
 
 ## [single-instance-thread-safe-version] - 2022-07-08
-## Added
+### Added
 - Use single thread locking / unlocking to prevent race conditions on balance
 - 
 ## [naive-version] - 2022-07-08
-## Added
+### Added
 - initial structure
 - gitignore
 - Readme

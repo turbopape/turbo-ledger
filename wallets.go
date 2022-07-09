@@ -25,6 +25,7 @@ type Wallet struct {
 	ID           string         `json:"wallet_id"`
 	Transactions []*Transaction `json:"transactions"`
 	Balance      float32        `json:"balance"`
+	Owner        string         `json:"owner"`
 	Tags         []string       `json:"tags"`
 }
 
@@ -63,9 +64,9 @@ func Genesis(rdb *redis.Client, vaultWalletId string, startingBalance float32) e
 
 	// creating search index on Wallet Ids
 	errCreateWalletIdIndex := createIndex(rdb, ctx,
-		"idx:wallet:id",
-		"wallet_id",
-		"$.wallet_id",
+		"idx:wallet:owner",
+		"owner",
+		"$.owner",
 		"TEXT")
 	if errCreateWalletIdIndex != nil {
 		return errCreateWalletIdIndex
@@ -129,24 +130,19 @@ func checkWalletExists(ctx context.Context, rdb *redis.Client, walletId string) 
 		return errors.New("could not check Wallet with empty Wallet Id")
 	}
 
-	searchWalletCmd := rdb.Do(ctx, "FT.SEARCH",
-		"idx:wallet:id",
-		fmt.Sprintf(`'@wallet_id:(%s)'`, walletId),
+	searchWalletCmd := rdb.Do(ctx, "JSON.GET",
+		"wallet:"+walletId,
 	)
 
-	output, errGetWallet := searchWalletCmd.Slice()
+	_, errGetWallet := searchWalletCmd.Text()
 
 	if errGetWallet != nil {
-		log.Printf("error in command: %e for command : %v", errGetWallet, searchWalletCmd.String())
-		return errGetWallet
+		return nil
 	}
 
-	if output[0].(int64) != 0 {
-		log.Printf("Wallet already exists, aborting")
-		return errWalletExists
-	}
+	log.Printf("%s wallet already exists, aborting", walletId)
+	return errWalletExists
 
-	return nil
 }
 
 func PostWallet(rdb *redis.Client) func(*gin.Context) {
