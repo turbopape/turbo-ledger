@@ -90,7 +90,8 @@ func main() {
 
 			router.POST("wallets", PostWallet(rdb))
 			router.POST("transactions", PostTransaction(rdb, mutex))
-			router.GET("wallets", SearchWalletsByTags(rdb))
+			router.GET("wallets/owner", SearchWallets(rdb, "idx:wallet:owner", `'@owner:(%s)'`))
+			router.GET("wallets/tags", SearchWallets(rdb, "idx:wallet:tags", `'@tags:{%s}'`))
 			router.Run(listenAddress)
 			return nil
 		},

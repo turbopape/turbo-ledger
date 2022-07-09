@@ -338,26 +338,30 @@ func PostTransaction(rdb *redis.Client, mutex *redsync.Mutex) func(*gin.Context)
 	}
 }
 
-func SearchWalletsByTags(rdb *redis.Client) func(*gin.Context) {
+func SearchWallets(rdb *redis.Client, idx, queryFormat string) func(*gin.Context) {
 	return func(c *gin.Context) {
 		ctx := context.Background()
-		if query, ok := c.GetQuery("query"); ok {
-			searchTransactionCmd := rdb.Do(ctx, "FT.SEARCH",
-				"idx:wallet:tags",
-				fmt.Sprintf(`'@tags:{%s}'`, query),
-			)
-			output, errDescriptionSearch := searchTransactionCmd.Slice()
-			if errDescriptionSearch != nil {
-				log.Printf("could not search with query %s command %s", query, searchTransactionCmd.String())
-				c.Status(http.StatusInternalServerError)
-				return
-			}
-			if output[0].(int64) > 0 {
-				c.IndentedJSON(http.StatusFound, map[string]interface{}{"wallet_id": output[1], "data": output[2]})
-				return
-			}
-		}
-		c.Status(http.StatusNotFound)
 
+		if query, ok := c.GetQuery("query"); ok {
+			idxQuery := fmt.Sprintf(queryFormat, query)
+			searchInRedis(c, rdb, ctx, idx, idxQuery, query)
+			return
+		}
+		c.Status(http.StatusBadRequest)
+	}
+}
+
+func searchInRedis(c *gin.Context, rdb *redis.Client, ctx context.Context, idx string, idx_query string, query string) {
+	searchTransactionCmd := rdb.Do(ctx, "FT.SEARCH",
+		idx,
+		idx_query,
+	)
+	output, errDescriptionSearch := searchTransactionCmd.Slice()
+	if errDescriptionSearch != nil {
+		log.Printf("could not search with query %s command %s", query, searchTransactionCmd.String())
+		c.Status(http.StatusInternalServerError)
+	}
+	if output[0].(int64) > 0 {
+		c.IndentedJSON(http.StatusFound, map[string]interface{}{"wallet_id": output[1], "data": output[2]})
 	}
 }

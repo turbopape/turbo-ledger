@@ -1,9 +1,17 @@
 # Change Log
-## re[0.1.0] - 2022-07-09
+## [0.1.0] - 2022-07-09
+### Removed
+- idx:wallet:id
 ### Changed
 - don't use FT.SEARCH to check for wallet's existence
+- refactor searchWallet to be generic
+- search has paths in api /wallet/tags, /wallet/owner
 ### Added
 - wallet owner, idx:wallet:owner index
+- serach on wallet owner
+### Fixed
+- in api when query is bad, return 400 malformed query
+- titles formatting in Changelog
 
 ## [minor-additions] - 2022-07-09
 ### Added

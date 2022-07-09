@@ -29,7 +29,7 @@ curl http://localhost:12000/transactions \
 
 ## Search wallets by tags
 ```shell
-curl http://localhost:12000/wallets\?q\=rich\
+curl http://localhost:12000/wallets/tags\?query\=rich\
     --include \
     --header "Content-Type: application/json" \
     --request "GET" 
