@@ -86,12 +86,13 @@ func main() {
 
 			// Running the API
 			router := gin.Default()
-			checkWalletExists(context.Background(), rdb, "src_wallet")
+			
 
 			router.POST("wallets", PostWallet(rdb))
 			router.POST("transactions", PostTransaction(rdb, mutex))
 			router.GET("wallets/owner", SearchWallets(rdb, "idx:wallet:owner", `'@owner:(%s)'`))
 			router.GET("wallets/tags", SearchWallets(rdb, "idx:wallet:tags", `'@tags:{%s}'`))
+			
 			router.Run(listenAddress)
 			return nil
 		},
