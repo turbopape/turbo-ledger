@@ -1,4 +1,5 @@
 # turbo-ledger - A Scalable Ledger
+This is an accompanying repo for the [Building turbo-ledger: A Scalable Ledger with Go and Redis](https://dev.to/turbopape/building-a-scalable-ledger-with-go-on-rediscloud-mo/stats) post.
 ## Building and Running API
 ```shell
 go get .
